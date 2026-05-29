@@ -21,6 +21,8 @@
   --radius:   13px;
   --radius-s: 8px;
   --shadow:   0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04);
+  --personal: #7c6dd9;
+  --business: #1a6fa8;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -35,6 +37,8 @@
     --text3:   #5e5c54;
     --accent:  #52b788;
     --shadow:  0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
+    --personal:#a89cf5;
+    --business:#6ab5e8;
   }
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -170,7 +174,12 @@ header {
   letter-spacing: -.01em; flex-shrink: 0;
 }
 .logo span { color: var(--accent); }
-.header-center { display: flex; gap: 4px; }
+
+/* Filter bar with two rows */
+.filter-area {
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+.filter-row { display: flex; gap: 4px; flex-wrap: nowrap; }
 .filter-btn {
   font-family: 'DM Sans', sans-serif;
   font-size: 12px; padding: 5px 12px;
@@ -181,6 +190,23 @@ header {
 }
 .filter-btn:hover { border-color: var(--border2); color: var(--text); }
 .filter-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+/* Personal/Business toggle */
+.context-toggle {
+  display: flex; gap: 0; border: 0.5px solid var(--border2);
+  border-radius: 20px; overflow: hidden;
+}
+.ctx-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px; padding: 4px 10px;
+  border: none; cursor: pointer;
+  background: transparent; color: var(--text3);
+  transition: all .15s; white-space: nowrap;
+}
+.ctx-btn.active-personal { background: var(--personal); color: #fff; }
+.ctx-btn.active-business { background: var(--business); color: #fff; }
+.ctx-btn.active-all      { background: var(--text2); color: var(--bg); }
+
 .header-right { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
 .sync-indicator {
   font-family: 'DM Mono', monospace;
@@ -260,17 +286,31 @@ main {
   border-radius: var(--radius);
   padding: 1.1rem 1.2rem 1rem;
   cursor: pointer; position: relative;
-  transition: border-color .15s, transform .12s, box-shadow .12s;
+  transition: border-color .15s, box-shadow .12s;
   box-shadow: var(--shadow);
   animation: cardIn .22s ease both;
+  user-select: none;
 }
 @keyframes cardIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
-.card:hover { border-color: var(--border2); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
-.card.stalled { border-left: 3px solid #c47f17; }
+.card:hover { border-color: var(--border2); box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+.card.gathering { border-left: 3px solid #c47f17; }
 .card.done-card { opacity: .6; }
+.card.dragging { opacity: .4; transform: scale(0.97); box-shadow: none; }
+.card.drag-over { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+
+/* Context badge on card */
+.ctx-badge {
+  font-size: 9px; font-weight: 600;
+  padding: 2px 6px; border-radius: 12px;
+  letter-spacing: .06em; text-transform: uppercase;
+  flex-shrink: 0;
+}
+.ctx-personal { background: rgba(124,109,217,0.15); color: var(--personal); }
+.ctx-business { background: rgba(26,111,168,0.15); color: var(--business); }
 
 .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
 .card-title { font-size: 14px; font-weight: 500; line-height: 1.35; flex: 1; }
+.card-top-right { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
 .cat-badge {
   font-size: 10px; font-weight: 500;
   padding: 3px 8px; border-radius: 20px;
@@ -293,22 +333,43 @@ main {
 .status-row { display: flex; align-items: center; gap: 7px; margin-bottom: 10px; }
 .status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .status-label { font-size: 12px; color: var(--text2); }
-.stall-tag {
+.gather-tag {
   margin-left: auto; font-size: 10px; font-family: 'DM Mono', monospace;
   color: #c47f17; background: #fdecd4;
   padding: 2px 7px; border-radius: 8px;
 }
-@media (prefers-color-scheme: dark) { .stall-tag { background: #3d2507; color: #e8a84a; } }
+@media (prefers-color-scheme: dark) { .gather-tag { background: #3d2507; color: #e8a84a; } }
 
-.progress-bar { height: 2px; background: var(--surface2); border-radius: 2px; margin-bottom: 10px; overflow: hidden; }
+.progress-bar { height: 3px; background: var(--surface2); border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
 .progress-fill { height: 100%; border-radius: 2px; transition: width .4s ease; }
+.progress-label { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-bottom: 8px; }
 
-.next-action {
+/* Card summary snippet */
+.card-summary {
   font-size: 12px; color: var(--text2); line-height: 1.5;
-  border-left: 2px solid var(--border2);
-  padding: 3px 0 3px 9px; margin-bottom: 10px;
-  font-style: italic;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
+
+/* Steps preview on card */
+.steps-preview {
+  margin-bottom: 9px;
+}
+.step-preview-item {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11.5px; color: var(--text2); padding: 2px 0;
+}
+.step-preview-item.done-step { color: var(--text3); text-decoration: line-through; }
+.step-check-mini {
+  width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+  border: 1.5px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+}
+.step-check-mini.checked { background: var(--accent); border-color: var(--accent); }
+.step-check-mini.checked::after { content: '✓'; font-size: 8px; color: #fff; }
 
 .card-footer { display: flex; justify-content: space-between; align-items: center; }
 .log-count { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
@@ -322,6 +383,15 @@ main {
 }
 .card:hover .del-card { opacity: 1; }
 .del-card:hover { color: var(--text); }
+
+/* drag handle hint */
+.drag-handle {
+  position: absolute; top: 10px; left: 10px;
+  opacity: 0; font-size: 13px;
+  color: var(--text3); cursor: grab; transition: opacity .15s;
+  line-height: 1;
+}
+.card:hover .drag-handle { opacity: 0.5; }
 
 /* ══════════════════════════════════
    MODAL
@@ -338,7 +408,7 @@ main {
   background: var(--surface);
   border: 0.5px solid var(--border2);
   border-radius: 18px;
-  width: 100%; max-width: 540px;
+  width: 100%; max-width: 560px;
   max-height: 92vh; overflow-y: auto;
   padding: 1.75rem 1.875rem;
   box-shadow: 0 20px 60px rgba(0,0,0,0.25);
@@ -372,6 +442,7 @@ main {
 .form-row textarea { resize: vertical; min-height: 80px; line-height: 1.55; }
 
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
 .slider-wrap { display: flex; align-items: center; gap: 12px; }
 .slider-wrap input[type=range] {
@@ -381,6 +452,112 @@ main {
 .slider-val {
   font-family: 'DM Mono', monospace;
   font-size: 13px; font-weight: 500; min-width: 38px; text-align: right;
+}
+
+/* ── Steps editor ── */
+.steps-editor { margin-bottom: 14px; }
+.steps-editor-label {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 11px; font-weight: 500;
+  color: var(--text3); text-transform: uppercase;
+  letter-spacing: .07em; margin-bottom: 6px;
+}
+.steps-editor-label span { font-size: 11px; color: var(--accent); font-style: normal; text-transform: none; letter-spacing: 0; cursor: pointer; }
+.steps-editor-label span:hover { text-decoration: underline; }
+.steps-list {
+  border: 0.5px solid var(--border2);
+  border-radius: var(--radius-s);
+  overflow: hidden;
+}
+.step-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 12px;
+  border-bottom: 0.5px solid var(--border);
+  background: var(--surface2);
+  transition: background .1s;
+}
+.step-item:last-child { border-bottom: none; }
+.step-item:hover { background: var(--surface3); }
+.step-check {
+  width: 16px; height: 16px; flex-shrink: 0;
+  border: 1.5px solid var(--border2); border-radius: 4px;
+  cursor: pointer; appearance: none; -webkit-appearance: none;
+  background: var(--surface); transition: all .15s;
+}
+.step-check:checked { background: var(--accent); border-color: var(--accent); }
+.step-check:checked::after { content: ''; display: block; } /* handled via CSS */
+.step-text {
+  flex: 1; font-size: 13px; color: var(--text);
+  background: none; border: none; outline: none;
+  font-family: 'DM Sans', sans-serif; line-height: 1.4;
+  min-width: 0;
+}
+.step-text.completed { text-decoration: line-through; color: var(--text3); }
+.step-del {
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 16px; padding: 0 2px;
+  opacity: 0; transition: opacity .15s; line-height: 1;
+}
+.step-item:hover .step-del { opacity: 1; }
+.step-del:hover { color: var(--text); }
+
+.steps-empty {
+  padding: 14px 12px;
+  font-size: 12px; color: var(--text3);
+  font-style: italic; background: var(--surface2);
+  border-radius: var(--radius-s);
+  border: 0.5px solid var(--border2);
+}
+
+.steps-paste-area {
+  margin-top: 8px;
+}
+.steps-paste-area textarea {
+  width: 100%; font-family: 'DM Sans', sans-serif;
+  font-size: 12px; padding: 9px 12px;
+  border: 0.5px solid var(--border2);
+  border-radius: var(--radius-s);
+  background: var(--surface2); color: var(--text);
+  outline: none; transition: border-color .15s;
+  resize: vertical; min-height: 80px; line-height: 1.55;
+}
+.steps-paste-area textarea:focus { border-color: var(--accent); }
+.steps-paste-hint { font-size: 11px; color: var(--text3); margin-bottom: 5px; }
+.steps-paste-btn {
+  margin-top: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px; padding: 6px 12px;
+  border: 0.5px solid var(--border2);
+  border-radius: var(--radius-s);
+  background: var(--surface3); color: var(--text);
+  cursor: pointer; transition: background .15s;
+}
+.steps-paste-btn:hover { background: var(--surface2); }
+.steps-add-row {
+  display: flex; gap: 6px; margin-top: 6px;
+}
+.steps-add-row input {
+  flex: 1; font-family: 'DM Sans', sans-serif;
+  font-size: 12px; padding: 7px 10px;
+  border: 0.5px solid var(--border2);
+  border-radius: var(--radius-s);
+  background: var(--surface2); color: var(--text);
+  outline: none;
+}
+.steps-add-row input:focus { border-color: var(--accent); }
+.steps-add-row button {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px; padding: 7px 12px;
+  border: 0.5px solid var(--border2);
+  border-radius: var(--radius-s);
+  background: var(--surface2); color: var(--text);
+  cursor: pointer; transition: background .15s; white-space: nowrap;
+}
+.steps-add-row button:hover { background: var(--surface3); }
+
+.steps-progress-note {
+  font-size: 11px; color: var(--text3); margin-top: 5px;
+  font-style: italic;
 }
 
 .section-lbl {
@@ -460,11 +637,11 @@ main {
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 @media (max-width: 600px) {
-  .header-inner { padding: 0 1rem; }
-  .header-center { display: none; }
+  .header-inner { padding: 0 1rem; height: auto; padding: 8px 1rem; flex-wrap: wrap; }
+  .filter-area { order: 3; width: 100%; }
   main { padding: 1.25rem 1rem 4rem; }
   .modal { padding: 1.25rem; }
-  .grid-2 { grid-template-columns: 1fr; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
   .setup-card { padding: 1.75rem; }
 }
 </style>
@@ -478,13 +655,11 @@ main {
     <h1 class="setup-heading">Let's get<br><em>organised.</em></h1>
     <p class="setup-sub">Your projects are stored privately in JSONBin. You'll need your <strong>X-Master-Key</strong> from jsonbin.io — it's shown on the API Keys page.</p>
 
-    <!-- Tab toggle -->
     <div style="display:flex;gap:0;margin-bottom:1.5rem;border:0.5px solid var(--border2);border-radius:var(--radius-s);overflow:hidden">
       <button id="tab-new" onclick="switchTab('new')" style="flex:1;padding:8px;font-family:'DM Sans',sans-serif;font-size:13px;border:none;cursor:pointer;background:var(--text);color:var(--bg);transition:all .15s">First device</button>
       <button id="tab-existing" onclick="switchTab('existing')" style="flex:1;padding:8px;font-family:'DM Sans',sans-serif;font-size:13px;border:none;cursor:pointer;background:transparent;color:var(--text2);transition:all .15s">Add another device</button>
     </div>
 
-    <!-- NEW DEVICE panel -->
     <div id="panel-new">
       <div class="setup-steps">
         <div class="setup-step">Go to <a href="https://jsonbin.io" target="_blank">jsonbin.io</a> and sign in / create a free account</div>
@@ -498,7 +673,6 @@ main {
       </div>
     </div>
 
-    <!-- EXISTING DEVICE panel -->
     <div id="panel-existing" style="display:none">
       <div class="setup-steps">
         <div class="setup-step">Go to <strong>Settings → Copy Bin ID</strong> in the app on your first device</div>
@@ -528,13 +702,24 @@ main {
   <header>
     <div class="header-inner">
       <div class="logo">Projects<span>.</span></div>
-      <div class="header-center" id="filters">
-        <button class="filter-btn active" data-filter="all">All</button>
-        <button class="filter-btn" data-filter="active">Active</button>
-        <button class="filter-btn" data-filter="stalled">Stalled</button>
-        <button class="filter-btn" data-filter="idea">Ideas</button>
-        <button class="filter-btn" data-filter="done">Done</button>
+
+      <div class="filter-area">
+        <!-- Status filters -->
+        <div class="filter-row" id="filters">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="active">Active</button>
+          <button class="filter-btn" data-filter="gathering">Gathering Power</button>
+          <button class="filter-btn" data-filter="idea">Ideas</button>
+          <button class="filter-btn" data-filter="done">Done</button>
+        </div>
+        <!-- Personal/Business context -->
+        <div class="context-toggle" id="ctxToggle">
+          <button class="ctx-btn active-all" data-ctx="all">All</button>
+          <button class="ctx-btn" data-ctx="personal">Personal</button>
+          <button class="ctx-btn" data-ctx="business">Business</button>
+        </div>
       </div>
+
       <div class="header-right">
         <div class="sync-indicator">
           <div class="sync-dot" id="syncDot"></div>
@@ -571,41 +756,23 @@ main {
       </div>
     </div>
     <div class="settings-row">
-      <div>
-        <div class="settings-label">Export backup</div>
-        <div class="settings-sub">Download all projects as JSON</div>
-      </div>
-      <div class="settings-action">
-        <button class="btn" onclick="exportData()">Export</button>
-      </div>
+      <div><div class="settings-label">Export backup</div><div class="settings-sub">Download all projects as JSON</div></div>
+      <div class="settings-action"><button class="btn" onclick="exportData()">Export</button></div>
     </div>
     <div class="settings-row">
-      <div>
-        <div class="settings-label">Import backup</div>
-        <div class="settings-sub">Merge from a previously exported file</div>
-      </div>
+      <div><div class="settings-label">Import backup</div><div class="settings-sub">Merge from a previously exported file</div></div>
       <div class="settings-action">
         <button class="btn" onclick="document.getElementById('importFile').click()">Import</button>
         <input type="file" id="importFile" accept=".json" style="display:none">
       </div>
     </div>
     <div class="settings-row">
-      <div>
-        <div class="settings-label">Force sync now</div>
-        <div class="settings-sub">Pull latest data from cloud</div>
-      </div>
-      <div class="settings-action">
-        <button class="btn" onclick="loadFromCloud(true)">Sync</button>
-      </div>
+      <div><div class="settings-label">Force sync now</div><div class="settings-sub">Pull latest data from cloud</div></div>
+      <div class="settings-action"><button class="btn" onclick="loadFromCloud(true)">Sync</button></div>
     </div>
     <div class="settings-row">
-      <div>
-        <div class="settings-label">Change API key</div>
-        <div class="settings-sub">Disconnect and re-enter credentials</div>
-      </div>
-      <div class="settings-action">
-        <button class="btn danger" onclick="resetApiKey()">Reset</button>
-      </div>
+      <div><div class="settings-label">Change API key</div><div class="settings-sub">Disconnect and re-enter credentials</div></div>
+      <div class="settings-action"><button class="btn danger" onclick="resetApiKey()">Reset</button></div>
     </div>
     <div class="btn-row" style="padding-top:.75rem">
       <button class="btn primary" onclick="closeSettings()">Done</button>
@@ -626,9 +793,14 @@ const JSONBIN    = 'https://api.jsonbin.io/v3';
 
 let projects     = [];
 let activeFilter = 'all';
+let activeCtx    = 'all'; // 'all' | 'personal' | 'business'
 let apiKey       = '';
 let binId        = '';
 let syncTimer    = null;
+
+// Drag state
+let dragId = null;
+let dragOverId = null;
 
 // ══════════════════════════════════
 // BOOT
@@ -653,6 +825,7 @@ function showApp() {
   document.getElementById('settingsBtn').onclick = openSettings;
   document.getElementById('addBtn').onclick = openAdd;
   document.getElementById('filters').addEventListener('click', onFilter);
+  document.getElementById('ctxToggle').addEventListener('click', onCtxFilter);
   document.getElementById('importFile').onchange = onImport;
 }
 
@@ -689,7 +862,6 @@ async function setupConnect() {
   const isExisting = document.getElementById('panel-existing').style.display !== 'none';
 
   if (isExisting) {
-    // Connect to existing bin
     const key = document.getElementById('existing-key-input').value.trim();
     const bid = document.getElementById('bin-id-input').value.trim();
     if (!key || !bid) {
@@ -699,9 +871,7 @@ async function setupConnect() {
     }
     try {
       apiKey = key; binId = bid;
-      const r = await fetch(`${JSONBIN}/b/${binId}/latest`, {
-        headers: authHeaders()
-      });
+      const r = await fetch(`${JSONBIN}/b/${binId}/latest`, { headers: authHeaders() });
       if (!r.ok) throw new Error('auth failed');
       const d = await r.json();
       projects = d.record.projects || [];
@@ -717,7 +887,6 @@ async function setupConnect() {
       apiKey = ''; binId = '';
     }
   } else {
-    // First device — create a new bin
     const key = document.getElementById('api-key-input').value.trim();
     if (!key) { btn.textContent = 'Connect & start →'; btn.disabled = false; return; }
     try {
@@ -758,9 +927,7 @@ async function loadFromCloud(manual) {
   if (!binId) return;
   setSyncStatus('syncing', 'syncing…');
   try {
-    const r = await fetch(`${JSONBIN}/b/${binId}/latest`, {
-      headers: authHeaders()
-    });
+    const r = await fetch(`${JSONBIN}/b/${binId}/latest`, { headers: authHeaders() });
     if (!r.ok) throw new Error();
     const d = await r.json();
     projects = d.record.projects || [];
@@ -800,7 +967,7 @@ async function saveToCloud() {
 // ══════════════════════════════════
 // UTILS
 // ══════════════════════════════════
-function stalledDays(p) {
+function gatheringDays(p) {
   if (p.status === 'done') return 0;
   const last = p.logs && p.logs.length ? p.logs[p.logs.length-1].ts : p.created;
   return Math.floor((Date.now() - last) / 86400000);
@@ -819,6 +986,37 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
+// Steps progress calculation
+function stepsProgress(steps) {
+  if (!steps || !steps.length) return null;
+  const done = steps.filter(s => s.done).length;
+  return Math.round((done / steps.length) * 100);
+}
+
+// ══════════════════════════════════
+// FILTER
+// ══════════════════════════════════
+function onFilter(e) {
+  if (!e.target.dataset.filter) return;
+  activeFilter = e.target.dataset.filter;
+  document.querySelectorAll('.filter-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.filter === activeFilter)
+  );
+  render();
+}
+
+function onCtxFilter(e) {
+  if (!e.target.dataset.ctx) return;
+  activeCtx = e.target.dataset.ctx;
+  document.querySelectorAll('.ctx-btn').forEach(b => {
+    b.className = 'ctx-btn';
+    if (b.dataset.ctx === activeCtx) {
+      b.classList.add(activeCtx === 'personal' ? 'active-personal' : activeCtx === 'business' ? 'active-business' : 'active-all');
+    }
+  });
+  render();
+}
+
 // ══════════════════════════════════
 // RENDER
 // ══════════════════════════════════
@@ -828,24 +1026,27 @@ const CAT_CLASSES   = { audio:'cat-audio', hardware:'cat-hardware', software:'ca
 const CAT_LABELS    = { audio:'Audio', hardware:'Hardware', software:'Software', rc:'RC', other:'Other' };
 
 function render() {
-  const filtered = projects.filter(p => {
-    if (activeFilter === 'all')     return true;
-    if (activeFilter === 'done')    return p.status === 'done';
-    if (activeFilter === 'stalled') return stalledDays(p) >= 7 && p.status !== 'done';
-    if (activeFilter === 'active')  return p.status === 'active';
-    if (activeFilter === 'idea')    return p.status === 'idea';
+  let filtered = projects.filter(p => {
+    // Context filter
+    if (activeCtx !== 'all' && (p.ctx || 'personal') !== activeCtx) return false;
+    // Status filter
+    if (activeFilter === 'all')       return true;
+    if (activeFilter === 'done')      return p.status === 'done';
+    if (activeFilter === 'gathering') return gatheringDays(p) >= 7 && p.status !== 'done';
+    if (activeFilter === 'active')    return p.status === 'active';
+    if (activeFilter === 'idea')      return p.status === 'idea';
     return true;
   });
 
-  const total   = projects.length;
-  const active  = projects.filter(p => p.status === 'active').length;
-  const stalled = projects.filter(p => stalledDays(p) >= 7 && p.status !== 'done').length;
-  const done    = projects.filter(p => p.status === 'done').length;
+  const total     = projects.length;
+  const active    = projects.filter(p => p.status === 'active').length;
+  const gathering = projects.filter(p => gatheringDays(p) >= 7 && p.status !== 'done').length;
+  const done      = projects.filter(p => p.status === 'done').length;
 
   document.getElementById('summaryBar').innerHTML = `
     <div class="stat"><div class="stat-num">${total}</div><div class="stat-lbl">Total</div></div>
     <div class="stat"><div class="stat-num">${active}</div><div class="stat-lbl">Active</div></div>
-    <div class="stat${stalled > 0 ? ' warn' : ''}"><div class="stat-num">${stalled}</div><div class="stat-lbl">Stalled</div></div>
+    <div class="stat${gathering > 0 ? ' warn' : ''}"><div class="stat-num">${gathering}</div><div class="stat-lbl">Gathering Power</div></div>
     <div class="stat"><div class="stat-num">${done}</div><div class="stat-lbl">Done</div></div>
   `;
 
@@ -861,25 +1062,50 @@ function render() {
   }
 
   grid.innerHTML = filtered.map(p => {
-    const days = stalledDays(p);
-    const isStalled = days >= 7 && p.status !== 'done';
-    const pct = p.progress || 0;
+    const days = gatheringDays(p);
+    const isGathering = days >= 7 && p.status !== 'done';
+    const steps = p.steps || [];
+    const stepsPct = steps.length ? stepsProgress(steps) : null;
+    const pct = stepsPct !== null ? stepsPct : (p.progress || 0);
     const fillColor = p.status === 'done' ? '#3a7fd4' : p.status === 'paused' ? '#c47f17' : '#2d9e6e';
     const logCount = (p.logs || []).length;
     const updated = days === 0 ? 'today' : days === 1 ? 'yesterday' : `${days}d ago`;
-    return `<div class="card${isStalled ? ' stalled' : ''}${p.status === 'done' ? ' done-card' : ''}" data-id="${p.id}">
+    const ctxClass = p.ctx === 'business' ? 'ctx-business' : 'ctx-personal';
+    const ctxLabel = p.ctx === 'business' ? 'Business' : 'Personal';
+    const summaryText = p.notes ? p.notes.trim().split('\n')[0].slice(0, 120) : '';
+
+    // Steps preview — show up to 3 steps
+    let stepsHtml = '';
+    if (steps.length) {
+      const preview = steps.slice(0, 3);
+      stepsHtml = `<div class="steps-preview">${preview.map(s => `
+        <div class="step-preview-item${s.done?' done-step':''}">
+          <div class="step-check-mini${s.done?' checked':''}"></div>
+          <span>${esc(s.text)}</span>
+        </div>`).join('')}
+        ${steps.length > 3 ? `<div style="font-size:11px;color:var(--text3);padding:2px 0 0 19px">+${steps.length-3} more</div>` : ''}
+      </div>`;
+    }
+
+    return `<div class="card${isGathering?' gathering':''}${p.status==='done'?' done-card':''}" data-id="${p.id}" draggable="true">
+      <span class="drag-handle" title="Drag to reorder">⠿</span>
       <button class="del-card" data-del="${p.id}" title="Delete">×</button>
       <div class="card-top">
         <div class="card-title">${esc(p.name)}</div>
-        <span class="cat-badge ${CAT_CLASSES[p.cat]||'cat-other'}">${CAT_LABELS[p.cat]||p.cat}</span>
+        <div class="card-top-right">
+          <span class="ctx-badge ${ctxClass}">${ctxLabel}</span>
+          <span class="cat-badge ${CAT_CLASSES[p.cat]||'cat-other'}">${CAT_LABELS[p.cat]||p.cat}</span>
+        </div>
       </div>
       <div class="status-row">
         <span class="status-dot" style="background:${STATUS_COLORS[p.status]||'#888'}"></span>
         <span class="status-label">${STATUS_LABELS[p.status]||p.status}</span>
-        ${isStalled ? `<span class="stall-tag">stalled ${days}d</span>` : ''}
+        ${isGathering ? `<span class="gather-tag">gathering ${days}d</span>` : ''}
       </div>
       <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${fillColor}"></div></div>
-      ${p.next ? `<div class="next-action">${esc(p.next)}</div>` : ''}
+      ${steps.length ? `<div class="progress-label">${steps.filter(s=>s.done).length}/${steps.length} steps · ${pct}%</div>` : ''}
+      ${stepsHtml}
+      ${summaryText && !steps.length ? `<div class="card-summary">${esc(summaryText)}</div>` : ''}
       <div class="card-footer">
         <span class="log-count">${logCount} log ${logCount===1?'entry':'entries'}</span>
         <span class="updated">${updated}</span>
@@ -887,12 +1113,47 @@ function render() {
     </div>`;
   }).join('');
 
+  // Card click → edit
   grid.querySelectorAll('.card').forEach(el => {
     el.addEventListener('click', e => {
-      if (e.target.closest('[data-del]')) return;
+      if (e.target.closest('[data-del]') || e.target.closest('.drag-handle')) return;
       openEdit(el.dataset.id);
     });
+
+    // Drag to reorder
+    el.addEventListener('dragstart', e => {
+      dragId = el.dataset.id;
+      setTimeout(() => el.classList.add('dragging'), 0);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    el.addEventListener('dragend', () => {
+      el.classList.remove('dragging');
+      grid.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+      if (dragId && dragOverId && dragId !== dragOverId) {
+        // Reorder in global projects array preserving non-filtered items
+        const fromIdx = projects.findIndex(p => p.id === dragId);
+        const toIdx   = projects.findIndex(p => p.id === dragOverId);
+        if (fromIdx >= 0 && toIdx >= 0) {
+          const [moved] = projects.splice(fromIdx, 1);
+          projects.splice(toIdx, 0, moved);
+          saveToCloud(); render();
+        }
+      }
+      dragId = null; dragOverId = null;
+    });
+    el.addEventListener('dragover', e => {
+      e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+      if (el.dataset.id !== dragId) {
+        grid.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+        el.classList.add('drag-over');
+        dragOverId = el.dataset.id;
+      }
+    });
+    el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
+    el.addEventListener('drop', e => e.preventDefault());
   });
+
+  // Delete buttons
   grid.querySelectorAll('[data-del]').forEach(el => {
     el.addEventListener('click', e => {
       e.stopPropagation();
@@ -905,38 +1166,87 @@ function render() {
 }
 
 // ══════════════════════════════════
-// FILTER
-// ══════════════════════════════════
-function onFilter(e) {
-  if (!e.target.dataset.filter) return;
-  activeFilter = e.target.dataset.filter;
-  document.querySelectorAll('.filter-btn').forEach(b =>
-    b.classList.toggle('active', b.dataset.filter === activeFilter)
-  );
-  render();
-}
-
-// ══════════════════════════════════
 // MODAL — PROJECT
 // ══════════════════════════════════
 function openAdd() {
-  showProjectModal({ id:'', name:'', cat:'other', status:'idea', progress:0, next:'', notes:'', logs:[], created:Date.now() });
+  showProjectModal({ id:'', name:'', cat:'other', ctx:'personal', status:'idea', progress:0, steps:[], notes:'', logs:[], created:Date.now() });
 }
 function openEdit(id) {
   const p = projects.find(x => x.id === id);
   if (p) showProjectModal(p);
 }
 
+// In-modal step state (ephemeral, committed on save)
+let modalSteps = [];
+
+function renderModalSteps() {
+  const container = document.getElementById('steps-list-container');
+  if (!container) return;
+  if (!modalSteps.length) {
+    container.innerHTML = `<div class="steps-empty">No steps yet — add one below or paste a list.</div>`;
+    updateStepsProgressNote();
+    return;
+  }
+  container.innerHTML = `<div class="steps-list">${modalSteps.map((s, i) => `
+    <div class="step-item" data-si="${i}">
+      <input type="checkbox" class="step-check" ${s.done?'checked':''} data-si="${i}">
+      <input type="text" class="step-text${s.done?' completed':''}" value="${esc(s.text)}" data-si="${i}" placeholder="Step description…">
+      <button class="step-del" data-si="${i}" title="Remove">×</button>
+    </div>`).join('')}</div>`;
+
+  // Wire up checkboxes
+  container.querySelectorAll('.step-check').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const i = parseInt(cb.dataset.si);
+      modalSteps[i].done = cb.checked;
+      cb.closest('.step-item').querySelector('.step-text').classList.toggle('completed', cb.checked);
+      updateStepsProgressNote();
+    });
+  });
+  // Wire up text edits
+  container.querySelectorAll('.step-text').forEach(inp => {
+    inp.addEventListener('input', () => {
+      modalSteps[parseInt(inp.dataset.si)].text = inp.value;
+    });
+  });
+  // Wire up deletes
+  container.querySelectorAll('.step-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      modalSteps.splice(parseInt(btn.dataset.si), 1);
+      renderModalSteps();
+    });
+  });
+  updateStepsProgressNote();
+}
+
+function updateStepsProgressNote() {
+  const note = document.getElementById('steps-progress-note');
+  if (!note) return;
+  if (!modalSteps.length) { note.textContent = ''; return; }
+  const done = modalSteps.filter(s => s.done).length;
+  const pct = Math.round((done / modalSteps.length) * 100);
+  note.textContent = `${done}/${modalSteps.length} complete · progress will be set to ${pct}%`;
+}
+
 function showProjectModal(p) {
   const isNew = !p.id;
   const logs = (p.logs || []).slice().reverse();
+  modalSteps = (p.steps || []).map(s => ({ ...s }));
+
   document.getElementById('modalBox').innerHTML = `
     <div class="modal-title">${isNew ? 'New project' : esc(p.name)}</div>
     <div class="form-row">
       <label>Name</label>
       <input id="f-name" value="${esc(p.name)}" placeholder="What's this project called?">
     </div>
-    <div class="grid-2">
+    <div class="grid-3">
+      <div class="form-row">
+        <label>Context</label>
+        <select id="f-ctx">
+          <option value="personal"${(p.ctx||'personal')==='personal'?' selected':''}>Personal</option>
+          <option value="business"${p.ctx==='business'?' selected':''}>Business</option>
+        </select>
+      </div>
       <div class="form-row">
         <label>Category</label>
         <select id="f-cat">
@@ -957,21 +1267,35 @@ function showProjectModal(p) {
         </select>
       </div>
     </div>
-    <div class="form-row">
-      <label>Progress — <span id="pct-lbl">${p.progress||0}</span>%</label>
-      <div class="slider-wrap">
-        <input type="range" id="f-prog" min="0" max="100" step="5" value="${p.progress||0}">
-        <span class="slider-val" id="pct-disp">${p.progress||0}%</span>
+
+    <!-- STEPS SECTION -->
+    <div class="steps-editor">
+      <div class="steps-editor-label">
+        <span style="font-size:11px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.07em">Steps</span>
+        <span id="toggle-paste-btn" onclick="togglePasteArea()">Paste a list from Claude ↓</span>
+      </div>
+      <div id="steps-list-container"></div>
+      <p class="steps-progress-note" id="steps-progress-note"></p>
+
+      <!-- Paste area (hidden by default) -->
+      <div class="steps-paste-area" id="paste-area" style="display:none">
+        <div class="steps-paste-hint">Paste steps one per line (Claude's numbered/bulleted lists work great):</div>
+        <textarea id="paste-input" placeholder="1. Research feasibility&#10;2. Set up repo&#10;3. Build MVP"></textarea>
+        <button class="steps-paste-btn" onclick="importPastedSteps()">Import these steps →</button>
+      </div>
+
+      <!-- Add single step -->
+      <div class="steps-add-row">
+        <input id="step-add-input" placeholder="Add a step…">
+        <button onclick="addStepFromInput()">+ Add</button>
       </div>
     </div>
-    <div class="form-row">
-      <label>Next action</label>
-      <input id="f-next" value="${esc(p.next||'')}" placeholder="What's the very next step?">
-    </div>
+
     <div class="form-row">
       <label>Notes</label>
       <textarea id="f-notes">${esc(p.notes||'')}</textarea>
     </div>
+
     ${!isNew ? `
       <div class="section-lbl">Activity log</div>
       <div class="log-list" id="log-list">
@@ -991,15 +1315,15 @@ function showProjectModal(p) {
     </div>
   `;
 
+  renderModalSteps();
+
   const modal = document.getElementById('modal');
   modal.style.display = 'flex';
   setTimeout(() => document.getElementById('f-name').focus(), 60);
 
-  const prog = document.getElementById('f-prog');
-  prog.oninput = () => {
-    document.getElementById('pct-lbl').textContent = prog.value;
-    document.getElementById('pct-disp').textContent = prog.value + '%';
-  };
+  // Step-add on Enter
+  const stepIn = document.getElementById('step-add-input');
+  stepIn.addEventListener('keydown', e => { if (e.key === 'Enter') addStepFromInput(); });
 
   document.getElementById('cancelBtn').onclick = closeModal;
   document.getElementById('saveBtn').onclick = () => saveProject(p);
@@ -1040,16 +1364,65 @@ function showProjectModal(p) {
   document.addEventListener('keydown', escClose);
 }
 
+function togglePasteArea() {
+  const area = document.getElementById('paste-area');
+  const btn  = document.getElementById('toggle-paste-btn');
+  const open = area.style.display === 'none';
+  area.style.display = open ? '' : 'none';
+  btn.textContent = open ? 'Hide paste area ↑' : 'Paste a list from Claude ↓';
+  if (open) document.getElementById('paste-input').focus();
+}
+
+function importPastedSteps() {
+  const raw = document.getElementById('paste-input').value.trim();
+  if (!raw) return;
+  const lines = raw.split('\n')
+    .map(l => l.replace(/^[\s\-\*•\d\.\)]+/, '').trim())
+    .filter(l => l.length > 0);
+  if (!lines.length) { toast('No steps found — check the format.'); return; }
+  lines.forEach(text => modalSteps.push({ text, done: false }));
+  document.getElementById('paste-input').value = '';
+  document.getElementById('paste-area').style.display = 'none';
+  document.getElementById('toggle-paste-btn').textContent = 'Paste a list from Claude ↓';
+  renderModalSteps();
+  toast(`Imported ${lines.length} step(s).`);
+}
+
+function addStepFromInput() {
+  const inp = document.getElementById('step-add-input');
+  const text = inp.value.trim();
+  if (!text) return;
+  modalSteps.push({ text, done: false });
+  inp.value = '';
+  renderModalSteps();
+  inp.focus();
+}
+
 function saveProject(orig) {
   const name = document.getElementById('f-name').value.trim();
   if (!name) { document.getElementById('f-name').focus(); return; }
+
+  // Collect any un-saved text edits from step inputs
+  document.querySelectorAll('.step-text').forEach(inp => {
+    const i = parseInt(inp.dataset.si);
+    if (!isNaN(i) && modalSteps[i]) modalSteps[i].text = inp.value;
+  });
+
+  // Auto-compute progress from steps
+  let progress = parseInt(document.getElementById('f-prog') ? document.getElementById('f-prog').value : orig.progress || 0);
+  if (modalSteps.length) {
+    const done = modalSteps.filter(s => s.done).length;
+    progress = Math.round((done / modalSteps.length) * 100);
+  }
+
   const data = {
     id:       orig.id || uid(),
     name,
     cat:      document.getElementById('f-cat').value,
+    ctx:      document.getElementById('f-ctx').value,
     status:   document.getElementById('f-status').value,
-    progress: parseInt(document.getElementById('f-prog').value),
-    next:     document.getElementById('f-next').value.trim(),
+    progress,
+    steps:    modalSteps.map(s => ({ text: s.text.trim(), done: !!s.done })).filter(s => s.text),
     notes:    document.getElementById('f-notes').value.trim(),
     logs:     orig.logs || [],
     created:  orig.created || Date.now(),
