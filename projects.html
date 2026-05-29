@@ -62,7 +62,9 @@ body {
   min-height: 100vh;
   display: flex; align-items: center; justify-content: center;
   padding: 2rem;
+  animation: fadeIn .2s ease;
 }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .setup-card {
   background: var(--surface);
   border: 0.5px solid var(--border2);
@@ -175,10 +177,6 @@ header {
 }
 .logo span { color: var(--accent); }
 
-/* Filter bar with two rows */
-.filter-area {
-  display: flex; flex-direction: column; gap: 4px; align-items: center;
-}
 .filter-row { display: flex; gap: 4px; flex-wrap: nowrap; }
 .filter-btn {
   font-family: 'DM Sans', sans-serif;
@@ -638,7 +636,8 @@ main {
 
 @media (max-width: 600px) {
   .header-inner { padding: 0 1rem; height: auto; padding: 8px 1rem; flex-wrap: wrap; }
-  .filter-area { order: 3; width: 100%; }
+  .filter-row, .context-toggle { order: 3; }
+  .filter-row { width: 100%; overflow-x: auto; }
   main { padding: 1.25rem 1rem 4rem; }
   .modal { padding: 1.25rem; }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
@@ -649,7 +648,7 @@ main {
 <body>
 
 <!-- ══ SETUP SCREEN ══ -->
-<div id="setup-screen" class="screen active">
+<div id="setup-screen" class="screen">
   <div class="setup-card">
     <div class="setup-eyebrow">Setup</div>
     <h1 class="setup-heading">Let's get<br><em>organised.</em></h1>
@@ -703,21 +702,17 @@ main {
     <div class="header-inner">
       <div class="logo">Projects<span>.</span></div>
 
-      <div class="filter-area">
-        <!-- Status filters -->
-        <div class="filter-row" id="filters">
-          <button class="filter-btn active" data-filter="all">All</button>
-          <button class="filter-btn" data-filter="active">Active</button>
-          <button class="filter-btn" data-filter="gathering">Gathering Power</button>
-          <button class="filter-btn" data-filter="idea">Ideas</button>
-          <button class="filter-btn" data-filter="done">Done</button>
-        </div>
-        <!-- Personal/Business context -->
-        <div class="context-toggle" id="ctxToggle">
-          <button class="ctx-btn active-all" data-ctx="all">All</button>
-          <button class="ctx-btn" data-ctx="personal">Personal</button>
-          <button class="ctx-btn" data-ctx="business">Business</button>
-        </div>
+      <div class="filter-row" id="filters">
+        <button class="filter-btn active" data-filter="all">All</button>
+        <button class="filter-btn" data-filter="active">Active</button>
+        <button class="filter-btn" data-filter="gathering">Gathering Power</button>
+        <button class="filter-btn" data-filter="idea">Ideas</button>
+        <button class="filter-btn" data-filter="done">Done</button>
+      </div>
+      <div class="context-toggle" id="ctxToggle">
+        <button class="ctx-btn active-all" data-ctx="all">All</button>
+        <button class="ctx-btn" data-ctx="personal">Personal</button>
+        <button class="ctx-btn" data-ctx="business">Business</button>
       </div>
 
       <div class="header-right">
@@ -809,7 +804,18 @@ let dragOverId = null;
   apiKey = localStorage.getItem(LS_KEY) || '';
   binId  = localStorage.getItem(LS_BIN) || '';
   if (apiKey) {
-    showApp();
+    // Show app immediately (no flash of setup screen)
+    show('app-screen');
+    document.getElementById('settingsBtn').onclick = openSettings;
+    document.getElementById('addBtn').onclick = openAdd;
+    document.getElementById('filters').addEventListener('click', onFilter);
+    document.getElementById('ctxToggle').addEventListener('click', onCtxFilter);
+    document.getElementById('importFile').onchange = onImport;
+    // Load cached data instantly so cards appear before cloud responds
+    try {
+      const cached = localStorage.getItem(LS_CACHE);
+      if (cached) { projects = JSON.parse(cached); render(); }
+    } catch(_) {}
     loadFromCloud();
   } else {
     show('setup-screen');
@@ -822,11 +828,16 @@ function show(id) {
 }
 function showApp() {
   show('app-screen');
-  document.getElementById('settingsBtn').onclick = openSettings;
-  document.getElementById('addBtn').onclick = openAdd;
-  document.getElementById('filters').addEventListener('click', onFilter);
-  document.getElementById('ctxToggle').addEventListener('click', onCtxFilter);
-  document.getElementById('importFile').onchange = onImport;
+  // Guard against double-binding if already wired
+  const addBtn = document.getElementById('addBtn');
+  if (!addBtn._wired) {
+    addBtn._wired = true;
+    document.getElementById('settingsBtn').onclick = openSettings;
+    addBtn.onclick = openAdd;
+    document.getElementById('filters').addEventListener('click', onFilter);
+    document.getElementById('ctxToggle').addEventListener('click', onCtxFilter);
+    document.getElementById('importFile').onchange = onImport;
+  }
 }
 
 // ══════════════════════════════════
@@ -1465,7 +1476,9 @@ function resetApiKey() {
   localStorage.removeItem(LS_KEY);
   localStorage.removeItem(LS_BIN);
   localStorage.removeItem(LS_CACHE);
-  apiKey = ''; binId = '';
+  apiKey = ''; binId = ''; projects = [];
+  const addBtn = document.getElementById('addBtn');
+  if (addBtn) addBtn._wired = false;
   closeSettings();
   show('setup-screen');
   document.getElementById('api-key-input').value = '';
