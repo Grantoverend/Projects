@@ -52,15 +52,16 @@ body {
 }
 
 /* ── Screens ── */
-.screen { display: none; }
-.screen.active { display: block; }
+.screen { display: none !important; }
+.screen.active { display: block !important; }
 
 /* ══════════════════════════════════
    SETUP SCREEN
 ══════════════════════════════════ */
-#setup-screen {
+#setup-screen.active {
+  display: flex !important;
+  align-items: center; justify-content: center;
   min-height: 100vh;
-  display: flex; align-items: center; justify-content: center;
   padding: 2rem;
   animation: fadeIn .2s ease;
 }
